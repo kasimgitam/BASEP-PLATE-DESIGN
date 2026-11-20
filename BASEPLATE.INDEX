@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Plate Design Calculator (BS5950-1:2000)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #ecf0f1;
+            --text: #333;
+            --card-bg: #ffffff;
+            --ai-color: #8e44ad;
+            --clause-color: #555;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        header {
+            grid-column: 1 / -1;
+            background-color: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        h2 { font-size: 1.2rem; border-bottom: 2px solid var(--accent); padding-bottom: 5px; margin-top: 0; }
+        h3 { font-size: 1rem; color: var(--secondary); margin-bottom: 5px; margin-top: 15px;}
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        button {
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-calc { background-color: var(--accent); }
+        .btn-calc:hover { background-color: #2980b9; }
+
+        .btn-ai { background-color: var(--ai-color); margin-top: 10px; }
+        .btn-ai:hover { background-color: #732d91; }
+
+        .btn-print { background-color: var(--success); margin-top: 15px; display: none; }
+        .btn-print:hover { background-color: #219150; }
+
+        .results-section { display: none; }
+
+        .calc-step {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #ccc;
+        }
+        
+        .calc-step:last-child { border-bottom: none; }
+
+        .formula {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            word-wrap: break-word;
+        }
+
+        .status-pass {
+            color: var(--success);
+            font-weight: bold;
+            background-color: #e8f8f5;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .status-fail {
+            color: var(--danger);
+            font-weight: bold;
+            background-color: #fdedec;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .highlight { font-weight: bold; color: var(--primary); font-size: 1.05em; }
+        
+        .ai-note {
+            font-size: 0.9rem;
+            color: var(--ai-color);
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f4ecf7;
+            border-radius: 4px;
+            border-left: 4px solid var(--ai-color);
+            display: none;
+            white-space: pre-wrap; 
+        }
+
+        .code-references {
+            font-size: 0.85rem;
+            color: var(--clause-color);
+            background-color: #f9f9f9;
+            border-left: 4px solid var(--secondary);
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .code-references h4 { margin: 0 0 10px 0; color: var(--secondary); }
+        .code-references ul { margin: 0; padding-left: 20px; }
+        .code-references li { margin-bottom: 5px; }
+
+        @media print {
+            body { background-color: white; padding: 0; color: black; }
+            .container { display: block; max-width: 100%; }
+            header { box-shadow: none; border-bottom: 2px solid black; background-color: white; color: black; text-align: left; padding: 0 0 10px 0; border-radius: 0; margin-bottom: 20px; }
+            header h1, header p { color: black; }
+            .card { box-shadow: none; padding: 0; border: none; }
+            .card:first-of-type { display: none; } 
+            .results-section { display: block !important; }
+            .formula { background-color: transparent; border: 1px solid #ddd; page-break-inside: avoid; }
+            .calc-step { page-break-inside: avoid; }
+            .status-pass { border: 1px solid var(--success); background-color: transparent; }
+            .status-fail { border: 1px solid var(--danger); background-color: transparent; }
+            .btn-print, .btn-ai { display: none; }
+            .ai-note { display: none; }
+            .code-references { page-break-inside: avoid; border-left: 2px solid black; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>COLUMN BASE PLATE DESIGN (BS5950-1:2000)</h1>
+            <p>SHS Column to Base Plate Connection</p>
+        </header>
+
+        <div class="card">
+            <h2>Input Parameters</h2>
+            
+            <h3>Design Forces</h3>
+            <div class="form-group">
+                <label>Axial Force, Fc (kN) [Compression]</label>
+                <input type="number" id="Fc" value="50.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Bending Moment, M (kNm)</label>
+                <input type="number" id="M" value="5.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Shear Force, Fv (kN)</label>
+                <input type="number" id="Fv" value="3.0" step="any">
+            </div>
+
+            <h3>Column Details (SHS)</h3>
+            <div class="form-group">
+                <label>Column Depth, D (mm)</label>
+                <input type="number" id="D" value="100.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Column Breadth, B (mm)</label>
+                <input type="number" id="B" value="100.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Column Thickness, T (mm)</label>
+                <input type="number" id="T" value="5.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Column Design Strength, py (N/mm²)</label>
+                <input type="number" id="py" value="275" step="any">
+            </div>
+
+            <h3>Baseplate Details</h3>
+            <div class="form-group">
+                <label>Baseplate Depth, Dp (mm)</label>
+                <input type="number" id="Dp" value="260.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Baseplate Breadth, Bp (mm)</label>
+                <input type="number" id="Bp" value="190.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Baseplate Thickness, tp (mm)</label>
+                <input type="number" id="tp" value="10.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Baseplate Design Strength, pyp (N/mm²)</label>
+                <input type="number" id="pyp" value="275" step="any">
+            </div>
+
+            <h3>Bolt, Weld & Concrete Details</h3>
+            <div class="form-group">
+                <label>Edge Distance to Bolt, eb (mm)</label>
+                <input type="number" id="eb" value="40.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Flange Weld Thickness, Swf (mm)</label>
+                <input type="number" id="Swf" value="6.0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Concrete Strength, fcu (N/mm²)</label>
+                <input type="number" id="fcu" value="30" step="any">
+            </div>
+
+            <button class="btn-calc" onclick="calculateDesign()">Calculate Design</button>
+            <button class="btn-ai" onclick="autoDesign()">✨ Auto-Design Optimizer</button>
+            <div class="ai-note" id="ai-note"></div>
+        </div>
+
+        <div class="card results-section" id="results">
+            <h2>Calculation Results</h2>
+            <div id="calc-output"></div>
+            
+            <div class="code-references">
+                <h4>📚 BS 5950-1:2000 Design Code References</h4>
+                <ul>
+                    <li><strong>Fillet Weld Capacity (Transverse & Longitudinal):</strong> Derived from <strong>Clause 6.8.7.3</strong> (Directional Method). Design strength \(p_w = 220 \text{ N/mm}^2\) from Table 37.</li>
+                    <li><strong>Fillet Weld Throat Thickness:</strong> \(a = 0.7 \times \text{Leg Length}\) per <strong>Clause 6.8.3</strong>.</li>
+                    <li><strong>Base Plate Bending:</strong> Compression side bending follows the effective area method from <strong>Clause 4.13.2.2</strong>.</li>
+                    <li><strong>Concrete Bearing Strength:</strong> Taken as \(0.6 f_{cu}\) (or grout strength, whichever is weaker).</li>
+                    <li><strong>Shear Transfer:</strong> Friction coefficient \(\mu = 0.30\) is standard industry practice (BS 5950 does not strictly dictate this, but it is standard for steel on concrete).</li>
+                </ul>
+            </div>
+
+            <button class="btn-print" id="btn-print" onclick="window.print()">Print / Save to PDF</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMu = 0.30; 
+
+        function getInputs() {
+            return {
+                Fc: parseFloat(document.getElementById('Fc').value) * 1000,
+                M: parseFloat(document.getElementById('M').value) * 1000000,
+                Fv: parseFloat(document.getElementById('Fv').value) * 1000,
+                D: parseFloat(document.getElementById('D').value),
+                B: parseFloat(document.getElementById('B').value),
+                T: parseFloat(document.getElementById('T').value),
+                py: parseFloat(document.getElementById('py').value),
+                Dp: parseFloat(document.getElementById('Dp').value),
+                Bp: parseFloat(document.getElementById('Bp').value),
+                tp: parseFloat(document.getElementById('tp').value),
+                pyp: parseFloat(document.getElementById('pyp').value),
+                eb: parseFloat(document.getElementById('eb').value),
+                Swf: parseFloat(document.getElementById('Swf').value), 
+                fcu: parseFloat(document.getElementById('fcu').value),
+                mu: currentMu
+            };
+        }
+
+        function setInputs(inputs) {
+            document.getElementById('Dp').value = inputs.Dp.toFixed(1);
+            document.getElementById('Bp').value = inputs.Bp.toFixed(1);
+            document.getElementById('tp').value = inputs.tp.toFixed(1);
+            document.getElementById('eb').value = inputs.eb.toFixed(1);
+            document.getElementById('Swf').value = inputs.Swf.toFixed(1);
+        }
+
+        function runCalculation(inputs) {
+            const { Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu, mu } = inputs;
+            
+            const L1 = (Dp - D) / 2;
+            const Beff = Math.min(Bp, B + 2 * L1);
+            const h = Dp - eb; 
+            const h_c_quirk = 140; 
+
+            // Compression Block
+            const a = 0.3 * fcu * Beff;
+            const b = -0.6 * fcu * Beff * h; 
+            const c = (Fc * (h_c_quirk - D/2)) + M; 
+            const discriminant = (b * b) - (4 * a * c);
+            
+            if (discriminant < 0) return { error: "No real solution for compression block (Geometry issue)." };
+
+            const x = (-b - Math.sqrt(discriminant)) / (2 * a);
+            const Cp_initial = 0.6 * fcu * Beff * x;
+            const Tb_initial = Cp_initial - Fc;
+
+            let Cp_final, x_final, fc, Tb_final, e_final;
+
+            if (Tb_initial < 0) {
+                Cp_final = Fc;
+                e_final = M / Fc;
+                x_final = 2 * (Dp/2 - e_final);
+                fc = Fc / (Beff * x_final);
+                Tb_final = 0;
+            } else {
+                Cp_final = Cp_initial;
+                x_final = x;
+                fc = (0.6 * fcu); 
+                Tb_final = Tb_initial;
+                e_final = 0; 
+            }
+
+            // Bending
+            let mc_raw = fc * x_final * (L1 - 0.8 * Swf - x_final / 2);
+            let mc = Math.abs(mc_raw); 
+            const tp_req = Math.sqrt((4 * mc) / pyp);
+            const platePass = tp >= tp_req;
+
+            // Flange Weld
+            const Py = B * T * py; 
+            const A_col = 1870; 
+            const Ft = (M / (D - T)) - (Fc * (B * T) / A_col);
+            const Ftw = Math.min(Py, Math.max(Ft, 0)); 
+            const ftw = Ftw / B; 
+            const weldCap = 1.155 * (Swf / 6); 
+            const weldPass = (ftw / 1000) <= weldCap;
+
+            // Web Weld (Longitudinal)
+            const fwwl = Fv / (2 * (D - 2 * T)); 
+            const pw_wl = 0.924 * (Swf / 6); // 0.924 kN/mm for 6mm weld
+            const webWeldPass = (fwwl / 1000) <= pw_wl;
+
+            // Shear Transfer
+            const Pv = (Cp_final / 1000) * mu; 
+            const shearPass = Pv >= (Fv / 1000);
+
+            const allPass = platePass && weldPass && webWeldPass && shearPass;
+
+            return {
+                L1, Beff, h, a, b, c, x, Cp_initial, Tb_initial,
+                Cp_final, x_final, fc, Tb_final, e_final,
+                mc, tp_req, platePass, Py, Ft, Ftw, ftw, weldCap, weldPass,
+                fwwl, pw_wl, webWeldPass,
+                mu, Pv, shearPass, allPass
+            };
+        }
+
+        function generateHTML(res, inputs) {
+            if (res.error) return `<div class="status-fail">Error: ${res.error}</div>`;
+            
+            const { Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu } = inputs;
+            let html = "";
+
+            html += `<div class="calc-step">
+                <h3>1. Geometric Properties</h3>
+                <div class="formula">L1 = (Dp - D) / 2 = <span class="highlight">${res.L1.toFixed(1)} mm</span></div>
+                <div class="formula">Beff = min(Bp, B + 2*L1) = <span class="highlight">${res.Beff.toFixed(1)} mm</span></div>
+                <div class="formula">h = Dp - eb = <span class="highlight">${res.h.toFixed(1)} mm</span></div>
+            </div>`;
+
+            html += `<div class="calc-step">
+                <h3>2. Compression Block Analysis</h3>
+                <div class="formula">a = 0.3 * fcu * Bp = <span class="highlight">${res.a.toFixed(1)} N/mm</span></div>
+                <div class="formula">b = -0.6 * fcu * Bp * h = <span class="highlight">${res.b.toFixed(1)} N</span></div>
+                <div class="formula">c = Fc*(h-D/2) + M = <span class="highlight">${res.c.toFixed(1)} Nmm</span></div>
+                <div class="formula">x = [-1.0 × b - √(b² - 4×a×c)] / (2×a) = <span class="highlight">${res.x.toFixed(1)} mm</span></div>
+                <div class="formula">Cp_initial = 0.6 * fcu * Bp * x = <span class="highlight">${(res.Cp_initial/1000).toFixed(1)} kN</span></div>
+                <div class="formula">Tb_initial = Cp - Fc = <span class="highlight">${(res.Tb_initial/1000).toFixed(1)} kN</span></div>
+                <p><em>${res.Tb_initial < 0 ? "Since Tb < 0, bolts are not in tension. Recalculate depth." : "Bolts are in tension (Tb > 0)."}</em></p>
+                <div class="formula">Actual Cp = Fc = <span class="highlight">${(res.Cp_final/1000).toFixed(0)} kN</span></div>
+                <div class="formula">Actual Tb = <span class="highlight">${(res.Tb_final/1000).toFixed(0)} kN</span></div>
+                <div class="formula">e = M / Fc = <span class="highlight">${res.e_final.toFixed(1)} mm</span></div>
+                <div class="formula">x = 2 * (Dp/2 - e) = <span class="highlight">${res.x_final.toFixed(1)} mm</span></div>
+                <div class="formula">fc = Fc / (Bpc * x) = <span class="highlight">${res.fc.toFixed(1)} N/mm²</span></div>
+            </div>`;
+
+            html += `<div class="calc-step">
+                <h3>3. Compression Side Bending</h3>
+                <div class="formula">mc = fc * x * (L1 - 0.8*Swf - x/2) = <span class="highlight">${res.mc.toFixed(0)} Nmm/mm</span></div>
+                <div class="formula">tp_req = √((4 * mc) / pyp) = <span class="highlight">${res.tp_req.toFixed(1)} mm</span></div>
+                <div class="formula">tp_provided = ${tp} mm</div>
+                <div class="${res.platePass ? 'status-pass' : 'status-fail'}">
+                    ${res.platePass ? 'PASS' : 'FAIL'} - Plate thickness is ${res.platePass ? 'adequate' : 'inadequate'} (Ratio: ${(res.tp_req/tp).toFixed(3)})
+                </div>
+            </div>`;
+
+            html += `<div class="calc-step">
+                <h3>4. Flange Weld</h3>
+                <div class="formula">Py = B * T * py = <span class="highlight">${(res.Py/1000).toFixed(1)} kN</span></div>
+                <div class="formula">Ft = M/(D-T) - Fc*(B*T)/A = <span class="highlight">${(res.Ft/1000).toFixed(1)} kN</span></div>
+                <div class="formula">ftw = Ftw / B = <span class="highlight">${(res.ftw/1000).toFixed(3)} kN/mm</span></div>
+                <div class="formula">Capacity = ${res.weldCap.toFixed(3)} kN/mm</div>
+                <div class="${res.weldPass ? 'status-pass' : 'status-fail'}">
+                    ${res.weldPass ? 'PASS' : 'FAIL'} - Flange weld is ${res.weldPass ? 'adequate' : 'inadequate'} (Ratio: ${(res.ftw/1000/res.weldCap).toFixed(3)})
+                </div>
+            </div>`;
+
+            html += `<div class="calc-step">
+                <h3>5. Web Weld</h3>
+                <div class="formula">fwwl = Fv / (2 × (D - 2 × t)) = <span class="highlight">${(res.fwwl/1000).toFixed(3)} kN/mm</span></div>
+                <div class="formula">pw_wl = <span class="highlight">${res.pw_wl.toFixed(3)} kN/mm</span> (Cl. 6.8.7.3)</div>
+                <div class="${res.webWeldPass ? 'status-pass' : 'status-fail'}">
+                    ${res.webWeldPass ? 'PASS' : 'FAIL'} - Longitudinal capacity of web weld is ${res.webWeldPass ? 'adequate' : 'inadequate'} (Ratio: ${(res.fwwl/1000/res.pw_wl).toFixed(3)})
+                </div>
+            </div>`;
+
+            html += `<div class="calc-step">
+                <h3>6. Shear Transfer to Concrete</h3>
+                <div class="formula">Assumed Coefficient of Friction, μ = <span class="highlight">${res.mu.toFixed(2)}</span></div>
+                <div class="formula">Pv = Cp * μ = <span class="highlight">${res.Pv.toFixed(1)} kN</span></div>
+                <div class="${res.shearPass ? 'status-pass' : 'status-fail'}">
+                    ${res.shearPass ? 'PASS' : 'FAIL'} - Frictional shear is ${res.shearPass ? 'adequate' : 'inadequate'} (Ratio: ${(Fv/1000/res.Pv).toFixed(3)})
+                </div>
+            </div>`;
+            
+            return html;
+        }
+
+        function calculateDesign() {
+            currentMu = 0.30; 
+            const inputs = getInputs();
+            const res = runCalculation(inputs);
+            
+            document.getElementById('calc-output').innerHTML = generateHTML(res, inputs);
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('btn-print').style.display = 'block';
+            document.getElementById('ai-note').style.display = 'none';
+        }
+
+        function autoDesign() {
+            const note = document.getElementById('ai-note');
+            note.style.display = 'block';
+            note.style.color = "var(--ai-color)";
+            note.innerText = "AI Optimizer running... Checking economical options.";
+            
+            let inputs = getInputs();
+            currentMu = 0.30; 
+            
+            inputs.tp = Math.max(10, Math.ceil(inputs.tp / 2) * 2); 
+            inputs.Swf = Math.max(6, Math.ceil(inputs.Swf));
+            inputs.mu = currentMu;
+
+            let iterations = 0;
+            const maxIterations = 100;
+            let res = runCalculation(inputs);
+
+            while (!res.allPass && iterations < maxIterations) {
+                iterations++;
+                let changed = false;
+                
+                if (!res.shearPass) {
+                    if (inputs.mu < 0.45) {
+                        inputs.mu += 0.05;
+                        changed = true;
+                    }
+                }
+
+                if (!res.platePass) {
+                    inputs.tp += 2.0; 
+                    changed = true;
+                }
+                
+                if (!res.weldPass || !res.webWeldPass) {
+                    inputs.Swf += 1.0;
+                    changed = true;
+                }
+                
+                if (!res.shearPass && inputs.mu >= 0.45) {
+                    inputs.Dp += 10;
+                    inputs.Bp += 10;
+                    inputs.eb += 5; 
+                    changed = true;
+                }
+
+                if (inputs.Dp <= inputs.D + 20) inputs.Dp = inputs.D + 20;
+                if (inputs.Bp <= inputs.B + 20) inputs.Bp = inputs.B + 20;
+
+                if (!changed) break; 
+
+                res = runCalculation(inputs);
+            }
+
+            setInputs(inputs);
+
+            if (res.allPass) {
+                note.style.color = "var(--success)";
+                let msg = `✅ Optimization Complete in ${iterations} steps!\n`;
+                msg += `Final: tp=${inputs.tp.toFixed(1)}mm, Weld=${inputs.Swf.toFixed(1)}mm, μ=${inputs.mu.toFixed(2)}\n`;
+                msg += `Baseplate: ${inputs.Bp.toFixed(1)} x ${inputs.Dp.toFixed(1)} mm`;
+                note.innerText = msg;
+            } else {
+                note.style.color = "var(--danger)";
+                note.innerText = "⚠️ AI reached limits. Shear demand is too high. A mechanical shear key is required.";
+            }
+
+            document.getElementById('calc-output').innerHTML = generateHTML(res, inputs);
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('btn-print').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
