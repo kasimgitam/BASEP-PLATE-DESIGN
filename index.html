@@ -69,16 +69,17 @@
             font-size: 0.9rem;
         }
 
-        input[type="number"] {
+        input[type="number"], select {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
             font-size: 1rem;
+            background-color: white;
         }
 
-        input[type="number"]:focus {
+        input[type="number"]:focus, select:focus {
             border-color: var(--accent);
             outline: none;
         }
@@ -174,13 +175,26 @@
         .code-references ul { margin: 0; padding-left: 20px; }
         .code-references li { margin-bottom: 5px; }
 
+        /* Print Specific Styles */
+        .print-header { display: none; }
+        .print-input-table { display: none; width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+        .print-input-table th, .print-input-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .print-input-table th { background-color: #f2f2f2; }
+
         @media print {
-            body { background-color: white; padding: 0; color: black; }
+            body { background-color: white; padding: 0; color: black; font-size: 12px; }
             .container { display: block; max-width: 100%; }
             header { box-shadow: none; border-bottom: 2px solid black; background-color: white; color: black; text-align: left; padding: 0 0 10px 0; border-radius: 0; margin-bottom: 20px; }
             header h1, header p { color: black; }
             .card { box-shadow: none; padding: 0; border: none; }
+            
+            /* Hide the input form card entirely */
             .card:first-of-type { display: none; } 
+            
+            /* Show print specific elements */
+            .print-header { display: block; margin-bottom: 15px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+            .print-input-table { display: table; page-break-inside: avoid; }
+            
             .results-section { display: block !important; }
             .formula { background-color: transparent; border: 1px solid #ddd; page-break-inside: avoid; }
             .calc-step { page-break-inside: avoid; }
@@ -197,12 +211,21 @@
     <div class="container">
         <header>
             <h1>COLUMN BASE PLATE DESIGN (BS5950-1:2000)</h1>
-            <p>SHS Column to Base Plate Connection</p>
+            <p id="header-subtitle">SHS / RHS / CHS Column to Base Plate Connection</p>
         </header>
 
         <div class="card">
             <h2>Input Parameters</h2>
             
+            <h3>Column Shape</h3>
+            <div class="form-group">
+                <select id="sectionType" onchange="updateSectionFields()">
+                    <option value="SHS">SHS (Square Hollow Section)</option>
+                    <option value="RHS">RHS (Rectangular Hollow Section)</option>
+                    <option value="CHS">CHS (Circular Hollow Section)</option>
+                </select>
+            </div>
+
             <h3>Design Forces</h3>
             <div class="form-group">
                 <label>Axial Force, Fc (kN) [Compression]</label>
@@ -217,16 +240,16 @@
                 <input type="number" id="Fv" value="3.0" step="any">
             </div>
 
-            <h3>Column Details (SHS)</h3>
+            <h3>Column Details</h3>
             <div class="form-group">
-                <label>Column Depth, D (mm)</label>
+                <label id="lblD">Column Depth, D (mm)</label>
                 <input type="number" id="D" value="100.0" step="any">
             </div>
-            <div class="form-group">
+            <div class="form-group" id="groupB">
                 <label>Column Breadth, B (mm)</label>
                 <input type="number" id="B" value="100.0" step="any">
             </div>
-            <div class="form-group">
+            <div class="form-group" id="groupT">
                 <label>Column Thickness, T (mm)</label>
                 <input type="number" id="T" value="5.0" step="any">
             </div>
@@ -273,6 +296,12 @@
         </div>
 
         <div class="card results-section" id="results">
+            <!-- Print Header for Input Parameters -->
+            <div class="print-header">Design Input Parameters</div>
+            <table class="print-input-table" id="print-inputs-table">
+                <!-- Content will be populated by JS before print -->
+            </table>
+
             <h2>Calculation Results</h2>
             <div id="calc-output"></div>
             
@@ -287,21 +316,43 @@
                 </ul>
             </div>
 
-            <button class="btn-print" id="btn-print" onclick="window.print()">Print / Save to PDF</button>
+            <button class="btn-print" id="btn-print" onclick="preparePrint()">Print / Save to PDF</button>
         </div>
     </div>
 
     <script>
         let currentMu = 0.30; 
 
+        function updateSectionFields() {
+            const type = document.getElementById('sectionType').value;
+            const lblD = document.getElementById('lblD');
+            const groupB = document.getElementById('groupB');
+            const groupT = document.getElementById('groupT');
+
+            if (type === 'CHS') {
+                lblD.innerText = "Outer Diameter, Do (mm)";
+                groupB.style.display = 'none';
+                groupT.style.display = 'none';
+                if(document.getElementById('D').value == 100) {
+                    document.getElementById('D').value = 114.3;
+                }
+            } else {
+                lblD.innerText = "Column Depth, D (mm)";
+                groupB.style.display = 'block';
+                groupT.style.display = 'block';
+            }
+        }
+
         function getInputs() {
+            const type = document.getElementById('sectionType').value;
             return {
+                type: type,
                 Fc: parseFloat(document.getElementById('Fc').value) * 1000,
                 M: parseFloat(document.getElementById('M').value) * 1000000,
                 Fv: parseFloat(document.getElementById('Fv').value) * 1000,
                 D: parseFloat(document.getElementById('D').value),
-                B: parseFloat(document.getElementById('B').value),
-                T: parseFloat(document.getElementById('T').value),
+                B: type === 'CHS' ? parseFloat(document.getElementById('D').value) : parseFloat(document.getElementById('B').value),
+                T: type === 'CHS' ? 0 : parseFloat(document.getElementById('T').value),
                 py: parseFloat(document.getElementById('py').value),
                 Dp: parseFloat(document.getElementById('Dp').value),
                 Bp: parseFloat(document.getElementById('Bp').value),
@@ -323,14 +374,13 @@
         }
 
         function runCalculation(inputs) {
-            const { Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu, mu } = inputs;
+            const { type, Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu, mu } = inputs;
             
             const L1 = (Dp - D) / 2;
             const Beff = Math.min(Bp, B + 2 * L1);
             const h = Dp - eb; 
             const h_c_quirk = 140; 
 
-            // Compression Block
             const a = 0.3 * fcu * Beff;
             const b = -0.6 * fcu * Beff * h; 
             const c = (Fc * (h_c_quirk - D/2)) + M; 
@@ -358,34 +408,33 @@
                 e_final = 0; 
             }
 
-            // Bending
             let mc_raw = fc * x_final * (L1 - 0.8 * Swf - x_final / 2);
             let mc = Math.abs(mc_raw); 
+            
             const tp_req = Math.sqrt((4 * mc) / pyp);
             const platePass = tp >= tp_req;
 
-            // Flange Weld
-            const Py = B * T * py; 
-            const A_col = 1870; 
+            const perimeter = type === 'CHS' ? Math.PI * D : 2 * (D + B);
+            const Py = type === 'CHS' ? (Math.PI * D * T * py) : (B * T * py); 
+            const A_col = type === 'CHS' ? (Math.PI * D * T) : 1870; 
+            
             const Ft = (M / (D - T)) - (Fc * (B * T) / A_col);
             const Ftw = Math.min(Py, Math.max(Ft, 0)); 
-            const ftw = Ftw / B; 
+            const ftw = Ftw / perimeter; 
             const weldCap = 1.155 * (Swf / 6); 
             const weldPass = (ftw / 1000) <= weldCap;
 
-            // Web Weld (Longitudinal)
-            const fwwl = Fv / (2 * (D - 2 * T)); 
-            const pw_wl = 0.924 * (Swf / 6); // 0.924 kN/mm for 6mm weld
+            const fwwl = Fv / (type === 'CHS' ? perimeter : 2 * (D - 2 * T)); 
+            const pw_wl = 0.924 * (Swf / 6); 
             const webWeldPass = (fwwl / 1000) <= pw_wl;
 
-            // Shear Transfer
             const Pv = (Cp_final / 1000) * mu; 
             const shearPass = Pv >= (Fv / 1000);
 
             const allPass = platePass && weldPass && webWeldPass && shearPass;
 
             return {
-                L1, Beff, h, a, b, c, x, Cp_initial, Tb_initial,
+                type, L1, Beff, h, a, b, c, x, Cp_initial, Tb_initial,
                 Cp_final, x_final, fc, Tb_final, e_final,
                 mc, tp_req, platePass, Py, Ft, Ftw, ftw, weldCap, weldPass,
                 fwwl, pw_wl, webWeldPass,
@@ -396,11 +445,11 @@
         function generateHTML(res, inputs) {
             if (res.error) return `<div class="status-fail">Error: ${res.error}</div>`;
             
-            const { Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu } = inputs;
+            const { type, Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu } = inputs;
             let html = "";
 
             html += `<div class="calc-step">
-                <h3>1. Geometric Properties</h3>
+                <h3>1. Geometric Properties (${type})</h3>
                 <div class="formula">L1 = (Dp - D) / 2 = <span class="highlight">${res.L1.toFixed(1)} mm</span></div>
                 <div class="formula">Beff = min(Bp, B + 2*L1) = <span class="highlight">${res.Beff.toFixed(1)} mm</span></div>
                 <div class="formula">h = Dp - eb = <span class="highlight">${res.h.toFixed(1)} mm</span></div>
@@ -434,9 +483,9 @@
 
             html += `<div class="calc-step">
                 <h3>4. Flange Weld</h3>
-                <div class="formula">Py = B * T * py = <span class="highlight">${(res.Py/1000).toFixed(1)} kN</span></div>
+                <div class="formula">Py = ${type === 'CHS' ? 'π * D * T * py' : 'B * T * py'} = <span class="highlight">${(res.Py/1000).toFixed(1)} kN</span></div>
                 <div class="formula">Ft = M/(D-T) - Fc*(B*T)/A = <span class="highlight">${(res.Ft/1000).toFixed(1)} kN</span></div>
-                <div class="formula">ftw = Ftw / B = <span class="highlight">${(res.ftw/1000).toFixed(3)} kN/mm</span></div>
+                <div class="formula">ftw = Ftw / ${type === 'CHS' ? 'π*D' : 'B'} = <span class="highlight">${(res.ftw/1000).toFixed(3)} kN/mm</span></div>
                 <div class="formula">Capacity = ${res.weldCap.toFixed(3)} kN/mm</div>
                 <div class="${res.weldPass ? 'status-pass' : 'status-fail'}">
                     ${res.weldPass ? 'PASS' : 'FAIL'} - Flange weld is ${res.weldPass ? 'adequate' : 'inadequate'} (Ratio: ${(res.ftw/1000/res.weldCap).toFixed(3)})
@@ -445,7 +494,7 @@
 
             html += `<div class="calc-step">
                 <h3>5. Web Weld</h3>
-                <div class="formula">fwwl = Fv / (2 × (D - 2 × t)) = <span class="highlight">${(res.fwwl/1000).toFixed(3)} kN/mm</span></div>
+                <div class="formula">fwwl = Fv / ${type === 'CHS' ? 'π*D' : '2*(D-2T)'} = <span class="highlight">${(res.fwwl/1000).toFixed(3)} kN/mm</span></div>
                 <div class="formula">pw_wl = <span class="highlight">${res.pw_wl.toFixed(3)} kN/mm</span> (Cl. 6.8.7.3)</div>
                 <div class="${res.webWeldPass ? 'status-pass' : 'status-fail'}">
                     ${res.webWeldPass ? 'PASS' : 'FAIL'} - Longitudinal capacity of web weld is ${res.webWeldPass ? 'adequate' : 'inadequate'} (Ratio: ${(res.fwwl/1000/res.pw_wl).toFixed(3)})
@@ -464,6 +513,40 @@
             return html;
         }
 
+        // Generate Input Table for Print
+        function generateInputTable(inputs) {
+            const { type, Fc, M, Fv, D, B, T, py, Dp, Bp, tp, pyp, eb, Swf, fcu } = inputs;
+            
+            let html = `
+                <tr><th colspan="4" style="text-align:center; background-color:#e0e0e0;">Design Parameters</th></tr>
+                <tr>
+                    <td><strong>Column Shape:</strong> ${type}</td>
+                    <td><strong>Axial Force (Fc):</strong> ${(Fc/1000).toFixed(1)} kN</td>
+                    <td><strong>Bending Moment (M):</strong> ${(M/1000000).toFixed(1)} kNm</td>
+                    <td><strong>Shear Force (Fv):</strong> ${(Fv/1000).toFixed(1)} kN</td>
+                </tr>
+                <tr>
+                    <td><strong>Column Depth (D):</strong> ${D.toFixed(1)} mm</td>
+                    <td><strong>Column Breadth (B):</strong> ${type === 'CHS' ? '-' : B.toFixed(1) + ' mm'}</td>
+                    <td><strong>Column Thickness (T):</strong> ${type === 'CHS' ? '-' : T.toFixed(1) + ' mm'}</td>
+                    <td><strong>Column Strength (py):</strong> ${py} N/mm²</td>
+                </tr>
+                <tr>
+                    <td><strong>Plate Depth (Dp):</strong> ${Dp.toFixed(1)} mm</td>
+                    <td><strong>Plate Breadth (Bp):</strong> ${Bp.toFixed(1)} mm</td>
+                    <td><strong>Plate Thickness (tp):</strong> ${tp.toFixed(1)} mm</td>
+                    <td><strong>Plate Strength (pyp):</strong> ${pyp} N/mm²</td>
+                </tr>
+                <tr>
+                    <td><strong>Edge Dist. (eb):</strong> ${eb.toFixed(1)} mm</td>
+                    <td><strong>Weld Size (Swf):</strong> ${Swf.toFixed(1)} mm</td>
+                    <td><strong>Concrete Strength (fcu):</strong> ${fcu} N/mm²</td>
+                    <td><strong>Friction (μ):</strong> ${currentMu.toFixed(2)}</td>
+                </tr>
+            `;
+            return html;
+        }
+
         function calculateDesign() {
             currentMu = 0.30; 
             const inputs = getInputs();
@@ -473,6 +556,12 @@
             document.getElementById('results').style.display = 'block';
             document.getElementById('btn-print').style.display = 'block';
             document.getElementById('ai-note').style.display = 'none';
+        }
+
+        function preparePrint() {
+            const inputs = getInputs();
+            document.getElementById('print-inputs-table').innerHTML = generateInputTable(inputs);
+            window.print();
         }
 
         function autoDesign() {
